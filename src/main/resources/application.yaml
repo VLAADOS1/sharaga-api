@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: hack-api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/hack_api}
+    username: ${SPRING_DATASOURCE_USERNAME:hack_api}
+    password: ${SPRING_DATASOURCE_PASSWORD:hack_api}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:9ce57517f16f4e1eb52f7be17313f4f744307b8c2b6b9e11f0f1a4c2e6d8792a}
+    access-min: ${APP_JWT_ACCESS_MIN:15}
+    refresh-days: ${APP_JWT_REFRESH_DAYS:30}
+  auth:
+    rl-max: ${APP_AUTH_RL_MAX:40}
+    rl-sec: ${APP_AUTH_RL_SEC:60}
