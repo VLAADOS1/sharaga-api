@@ -8,28 +8,14 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@Schema(description = "Р—Р°РїСЂРѕСЃ РЅР° СЂРµРіРёСЃС‚СЂР°С†РёСЋ")
-public class RegReq {
-
-    @NotBlank
-    @Pattern(regexp = "^[a-zA-Z0-9_]{3,18}$")
-    @Schema(description = "Р›РѕРіРёРЅ", example = "adm")
-    private String login;
+@Schema(description = "Запрос на восстановление пароля")
+public class PwdRecReq {
 
     @NotBlank
     @Email
     @Size(max = 120)
     @Schema(description = "Email", example = "user@example.com")
     private String email;
-
-    @NotBlank
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{6,40}$")
-    @Schema(description = "РџР°СЂРѕР»СЊ (6-40, РјРёРЅРёРјСѓРј 1 Р±СѓРєРІР° Рё 1 С†РёС„СЂР°)", example = "Pass123")
-    private String password;
-
-    @NotBlank
-    @Schema(description = "РџРѕРІС‚РѕСЂ РїР°СЂРѕР»СЏ", example = "Pass123")
-    private String passwordConfirm;
 
     @NotBlank
     @Size(max = 120)
@@ -45,4 +31,13 @@ public class RegReq {
     @Size(max = 120)
     @Schema(description = "Ответ на вопрос 3", example = "Синий")
     private String securityAnswer3;
+
+    @NotBlank
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{6,40}$")
+    @Schema(description = "Новый пароль", example = "NewPass123")
+    private String newPassword;
+
+    @NotBlank
+    @Schema(description = "Повтор нового пароля", example = "NewPass123")
+    private String newPasswordConfirm;
 }

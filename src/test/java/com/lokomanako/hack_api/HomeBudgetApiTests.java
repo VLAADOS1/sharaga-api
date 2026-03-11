@@ -39,22 +39,16 @@ class HomeBudgetApiTests {
     @Test
     void noDupLogin() throws Exception {
         String login = "u" + System.nanoTime();
+        String email1 = login + "@mail.test";
+        String email2 = "x" + login + "@mail.test";
         mvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(j(Map.of(
-                                "login", login,
-                                "password", "Pass123",
-                                "passwordConfirm", "Pass123"
-                        ))))
+                        .content(j(regBody(login, "Pass123", email1))))
                 .andExpect(status().isCreated());
 
         mvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(j(Map.of(
-                                "login", login.toUpperCase(),
-                                "password", "Pass123",
-                                "passwordConfirm", "Pass123"
-                        ))))
+                        .content(j(regBody(login.toUpperCase(), "Pass123", email2))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("AUTH_LOGIN_EXISTS"));
     }
@@ -82,6 +76,67 @@ class HomeBudgetApiTests {
                         ))))
                 .andExpect(status().isLocked())
                 .andExpect(jsonPath("$.error.code").value("AUTH_LOCKED"));
+    }
+
+    @Test
+    void recoverPasswordByEmailAndAnswers() throws Exception {
+        String login = "u" + System.nanoTime();
+        String email = login + "@mail.test";
+        reg(login, "Pass123", email);
+
+        mvc.perform(get("/api/v1/auth/recovery/questions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.question1").isNotEmpty())
+                .andExpect(jsonPath("$.question2").isNotEmpty())
+                .andExpect(jsonPath("$.question3").isNotEmpty());
+
+        mvc.perform(post("/api/v1/auth/recover-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "email", email,
+                                "securityAnswer1", "Барсик",
+                                "securityAnswer2", "Иван",
+                                "securityAnswer3", "Синий",
+                                "newPassword", "NewPass123",
+                                "newPasswordConfirm", "NewPass123"
+                        ))))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "login", login,
+                                "password", "Pass123"
+                        ))))
+                .andExpect(status().isUnauthorized());
+
+        mvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "login", login,
+                                "password", "NewPass123"
+                        ))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void recoverPasswordFailOnWrongAnswers() throws Exception {
+        String login = "u" + System.nanoTime();
+        String email = login + "@mail.test";
+        reg(login, "Pass123", email);
+
+        mvc.perform(post("/api/v1/auth/recover-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "email", email,
+                                "securityAnswer1", "wrong",
+                                "securityAnswer2", "Иван",
+                                "securityAnswer3", "Синий",
+                                "newPassword", "NewPass123",
+                                "newPasswordConfirm", "NewPass123"
+                        ))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_RECOVERY_FAIL"));
     }
 
     @Test
@@ -337,17 +392,29 @@ class HomeBudgetApiTests {
     }
 
     private AuthData reg(String login, String pass) throws Exception {
+        return reg(login, pass, login + "@mail.test");
+    }
+
+    private AuthData reg(String login, String pass, String email) throws Exception {
         MvcResult r = mvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(j(Map.of(
-                                "login", login,
-                                "password", pass,
-                                "passwordConfirm", pass
-                        ))))
+                        .content(j(regBody(login, pass, email))))
                 .andExpect(status().isCreated())
                 .andReturn();
         JsonNode n = om.readTree(r.getResponse().getContentAsString());
         return new AuthData(n.path("accessToken").asText());
+    }
+
+    private Map<String, Object> regBody(String login, String pass, String email) {
+        return Map.of(
+                "login", login,
+                "email", email,
+                "password", pass,
+                "passwordConfirm", pass,
+                "securityAnswer1", "Барсик",
+                "securityAnswer2", "Иван",
+                "securityAnswer3", "Синий"
+        );
     }
 
     private UUID addCat(String token, String kind, String name, String color) throws Exception {

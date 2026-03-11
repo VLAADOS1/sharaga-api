@@ -3,7 +3,9 @@ package com.lokomanako.hack_api.api.ctrl;
 import com.lokomanako.hack_api.api.dto.auth.AuthPack;
 import com.lokomanako.hack_api.api.dto.auth.LogReq;
 import com.lokomanako.hack_api.api.dto.auth.MeRes;
+import com.lokomanako.hack_api.api.dto.auth.PwdRecReq;
 import com.lokomanako.hack_api.api.dto.auth.RegReq;
+import com.lokomanako.hack_api.api.dto.auth.SecQRes;
 import com.lokomanako.hack_api.api.dto.auth.TokRes;
 import com.lokomanako.hack_api.api.dto.common.ErrRes;
 import com.lokomanako.hack_api.api.svc.AuthSvc;
@@ -40,6 +42,19 @@ public class AuthCtl {
 
     @Autowired
     private CtxU ctxU;
+
+    @GetMapping("/recovery/questions")
+    @Operation(summary = "РљРѕРЅС‚СЂРѕР»СЊРЅС‹Рµ РІРѕРїСЂРѕСЃС‹ РґР»СЏ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ")
+    @SecurityRequirements
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Р’РѕРїСЂРѕСЃС‹ РїРѕР»СѓС‡РµРЅС‹",
+                    content = @Content(schema = @Schema(implementation = SecQRes.class))),
+            @ApiResponse(responseCode = "429", description = "Р›РёРјРёС‚ Р·Р°РїСЂРѕСЃРѕРІ Рє auth endpoint",
+                    content = @Content(schema = @Schema(implementation = ErrRes.class)))
+    })
+    public SecQRes q() {
+        return authSvc.q();
+    }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -78,6 +93,23 @@ public class AuthCtl {
         AuthPack p = authSvc.log(req);
         setRef(res, p);
         return new TokRes(p.getAccessToken(), p.getTokenType(), p.getExpiresIn());
+    }
+
+    @PostMapping("/recover-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїР°СЂРѕР»СЏ РїРѕ email Рё РѕС‚РІРµС‚Р°Рј РЅР° РІРѕРїСЂРѕСЃС‹")
+    @SecurityRequirements
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "РџР°СЂРѕР»СЊ РѕР±РЅРѕРІР»РµРЅ"),
+            @ApiResponse(responseCode = "400", description = "РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё",
+                    content = @Content(schema = @Schema(implementation = ErrRes.class))),
+            @ApiResponse(responseCode = "401", description = "РќРµРІРµСЂРЅС‹Рµ РґР°РЅРЅС‹Рµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ",
+                    content = @Content(schema = @Schema(implementation = ErrRes.class))),
+            @ApiResponse(responseCode = "429", description = "Р›РёРјРёС‚ Р·Р°РїСЂРѕСЃРѕРІ Рє auth endpoint",
+                    content = @Content(schema = @Schema(implementation = ErrRes.class)))
+    })
+    public void recPwd(@Valid @RequestBody PwdRecReq req) {
+        authSvc.recPwd(req);
     }
 
     @PostMapping("/refresh")

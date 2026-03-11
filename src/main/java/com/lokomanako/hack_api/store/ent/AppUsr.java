@@ -15,7 +15,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "app_usr", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_app_usr_login_norm", columnNames = {"login_norm"})
+        @UniqueConstraint(name = "uk_app_usr_login_norm", columnNames = {"login_norm"}),
+        @UniqueConstraint(name = "uk_app_usr_email_norm", columnNames = {"email_norm"})
 })
 @Getter
 @Setter
@@ -33,6 +34,21 @@ public class AppUsr {
 
     @Column(name = "pass_hash", nullable = false, length = 120)
     private String passHash;
+
+    @Column(length = 120)
+    private String email;
+
+    @Column(name = "email_norm", length = 120)
+    private String emailNorm;
+
+    @Column(name = "sq1_hash", length = 120)
+    private String sq1Hash;
+
+    @Column(name = "sq2_hash", length = 120)
+    private String sq2Hash;
+
+    @Column(name = "sq3_hash", length = 120)
+    private String sq3Hash;
 
     @Column(name = "fail_cnt", nullable = false)
     private Integer failCnt;
