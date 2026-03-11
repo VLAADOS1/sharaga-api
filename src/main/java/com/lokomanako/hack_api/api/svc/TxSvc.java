@@ -10,9 +10,11 @@ import com.lokomanako.hack_api.api.util.PgU;
 import com.lokomanako.hack_api.api.util.StrU;
 import com.lokomanako.hack_api.store.ent.AppUsr;
 import com.lokomanako.hack_api.store.ent.Cat;
+import com.lokomanako.hack_api.store.ent.Goal;
 import com.lokomanako.hack_api.store.ent.Kind;
 import com.lokomanako.hack_api.store.ent.Tx;
 import com.lokomanako.hack_api.store.repo.CatRepo;
+import com.lokomanako.hack_api.store.repo.GoalRepo;
 import com.lokomanako.hack_api.store.repo.TxRepo;
 import com.lokomanako.hack_api.store.repo.UsrRepo;
 import java.math.BigDecimal;
@@ -34,6 +36,9 @@ public class TxSvc {
 
     @Autowired
     private CatRepo catRepo;
+
+    @Autowired
+    private GoalRepo goalRepo;
 
     @Autowired
     private UsrRepo usrRepo;
@@ -60,12 +65,16 @@ public class TxSvc {
         if (!c.getKind().equals(req.getType())) {
             throw new ApiEx(HttpStatus.BAD_REQUEST, "TX_TYPE_KIND_MISMATCH", "Type must match category kind");
         }
+        Goal g = goalRepo.findByIdAndUsr_Id(req.getGoalId(), uid).orElseThrow(() ->
+                new ApiEx(HttpStatus.BAD_REQUEST, "TX_BAD_GOAL", "Goal not found")
+        );
         AppUsr u = usrRepo.findById(uid).orElseThrow(() ->
                 new ApiEx(HttpStatus.UNAUTHORIZED, "AUTH_UNAUTHORIZED", "Unauthorized")
         );
         Tx t = new Tx();
         t.setUsr(u);
         t.setCat(c);
+        t.setGoal(g);
         t.setType(req.getType());
         t.setSum(req.getSum());
         t.setNote(StrU.note(req.getNote()));
@@ -79,9 +88,15 @@ public class TxSvc {
                 new ApiEx(HttpStatus.NOT_FOUND, "TX_NOT_FOUND", "Transaction not found")
         );
         Cat c = t.getCat();
+        Goal g = t.getGoal();
         if (req.getCatId() != null) {
             c = catRepo.findByIdAndUsr_Id(req.getCatId(), uid).orElseThrow(() ->
                     new ApiEx(HttpStatus.BAD_REQUEST, "TX_BAD_CATEGORY", "Category not found")
+            );
+        }
+        if (req.getGoalId() != null) {
+            g = goalRepo.findByIdAndUsr_Id(req.getGoalId(), uid).orElseThrow(() ->
+                    new ApiEx(HttpStatus.BAD_REQUEST, "TX_BAD_GOAL", "Goal not found")
             );
         }
         Kind k = req.getType() == null ? t.getType() : req.getType();
@@ -97,6 +112,7 @@ public class TxSvc {
         }
 
         t.setCat(c);
+        t.setGoal(g);
         t.setType(k);
         t.setSum(sum);
         t.setNote(note);
@@ -121,6 +137,8 @@ public class TxSvc {
                 t.getCat().getId(),
                 t.getCat().getName(),
                 t.getCat().getColor(),
+                t.getGoal() == null ? null : t.getGoal().getId(),
+                t.getGoal() == null ? null : t.getGoal().getName(),
                 t.getDt()
         );
     }

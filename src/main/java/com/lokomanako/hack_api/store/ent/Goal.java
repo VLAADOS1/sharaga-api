@@ -5,10 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.Getter;
@@ -16,9 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "goal_item", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_goal_usr", columnNames = {"usr_id"})
-})
+@Table(name = "goal_item")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,7 +24,7 @@ public class Goal {
     @Id
     private UUID id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usr_id", nullable = false)
     private AppUsr usr;
 

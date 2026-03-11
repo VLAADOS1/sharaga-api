@@ -3,6 +3,7 @@ package com.lokomanako.hack_api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lokomanako.hack_api.store.repo.GoalRepo;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Map;
@@ -20,7 +21,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -88,6 +88,7 @@ class HomeBudgetApiTests {
     void allowPastTx() throws Exception {
         AuthData a = reg("u" + System.nanoTime(), "Pass123");
         UUID catId = addCat(a.token, "EXP", "Meal", "#11AA22");
+        UUID goalId = addGoal(a.token, "Trip", 1000);
 
         String y = LocalDate.now(ZoneId.of("UTC")).minusDays(1).toString();
         mvc.perform(post("/api/v1/transactions")
@@ -98,10 +99,31 @@ class HomeBudgetApiTests {
                                 "sum", 10.5,
                                 "note", "x",
                                 "catId", catId,
+                                "goalId", goalId,
                                 "date", y
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.date").value(y));
+    }
+
+    @Test
+    void goalRequiredForTx() throws Exception {
+        AuthData a = reg("u" + System.nanoTime(), "Pass123");
+        UUID catId = addCat(a.token, "EXP", "Meal", "#11AA22");
+        String d = LocalDate.now(ZoneId.of("UTC")).toString();
+
+        mvc.perform(post("/api/v1/transactions")
+                        .header("Authorization", "Bearer " + a.token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "type", "exp",
+                                "sum", 10.5,
+                                "note", "x",
+                                "catId", catId,
+                                "date", d
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERR"));
     }
 
     @Test
@@ -208,6 +230,7 @@ class HomeBudgetApiTests {
     void noDelUsedCat() throws Exception {
         AuthData a = reg("u" + System.nanoTime(), "Pass123");
         UUID catId = addCat(a.token, "EXP", "Taxi", "#445566");
+        UUID goalId = addGoal(a.token, "Car", 50000);
 
         String d = LocalDate.now(ZoneId.of("UTC")).toString();
         mvc.perform(post("/api/v1/transactions")
@@ -218,6 +241,7 @@ class HomeBudgetApiTests {
                                 "sum", 20.0,
                                 "note", "ride",
                                 "catId", catId,
+                                "goalId", goalId,
                                 "date", d
                         ))))
                 .andExpect(status().isCreated());
@@ -229,27 +253,39 @@ class HomeBudgetApiTests {
     }
 
     @Test
-    void oneGoalOnly() throws Exception {
+    void manyGoalsSupported() throws Exception {
         AuthData a = reg("u" + System.nanoTime(), "Pass123");
 
-        mvc.perform(put("/api/v1/goal")
+        mvc.perform(post("/api/v1/goal")
                         .header("Authorization", "Bearer " + a.token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(j(Map.of("name", "A", "target", 100))))
                 .andExpect(status().isBadRequest());
 
-        mvc.perform(put("/api/v1/goal")
+        UUID g1 = addGoal(a.token, "Goal 1", 100);
+        UUID g2 = addGoal(a.token, "Goal 2", 200);
+
+        mvc.perform(get("/api/v1/goal")
+                        .header("Authorization", "Bearer " + a.token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mvc.perform(patch("/api/v1/goal/{id}", g2)
                         .header("Authorization", "Bearer " + a.token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(j(Map.of("name", "Goal 1", "target", 100))))
+                        .content(j(Map.of("name", "Goal 2 Updated", "target", 250))))
                 .andExpect(status().isOk());
 
-        mvc.perform(put("/api/v1/goal")
-                        .header("Authorization", "Bearer " + a.token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(j(Map.of("name", "Goal 2", "target", 200))))
+        mvc.perform(delete("/api/v1/goal/{id}", g1)
+                        .header("Authorization", "Bearer " + a.token))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/v1/goal")
+                        .header("Authorization", "Bearer " + a.token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Goal 2"));
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(g2.toString()))
+                .andExpect(jsonPath("$[0].name").value("Goal 2 Updated"));
 
         MvcResult me = mvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + a.token))
@@ -257,6 +293,47 @@ class HomeBudgetApiTests {
                 .andReturn();
         String uid = om.readTree(me.getResponse().getContentAsString()).path("id").asText();
         assertThat(goalRepo.countByUsr_Id(UUID.fromString(uid))).isEqualTo(1);
+    }
+
+    @Test
+    void txUpdatesSelectedGoalBalance() throws Exception {
+        AuthData a = reg("u" + System.nanoTime(), "Pass123");
+        UUID incCat = addCat(a.token, "INC", "Salary", "#11AA11");
+        UUID expCat = addCat(a.token, "EXP", "Food", "#AA1111");
+        UUID g1 = addGoal(a.token, "Flat", 5000000);
+        UUID g2 = addGoal(a.token, "Vacation", 200000);
+        String d = LocalDate.now(ZoneId.of("UTC")).toString();
+
+        mvc.perform(post("/api/v1/transactions")
+                        .header("Authorization", "Bearer " + a.token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "type", "inc",
+                                "sum", 100.0,
+                                "note", "salary",
+                                "catId", incCat,
+                                "goalId", g1,
+                                "date", d
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.goalId").value(g1.toString()));
+
+        mvc.perform(post("/api/v1/transactions")
+                        .header("Authorization", "Bearer " + a.token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "type", "exp",
+                                "sum", 25.0,
+                                "note", "lunch",
+                                "catId", expCat,
+                                "goalId", g2,
+                                "date", d
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.goalId").value(g2.toString()));
+
+        assertThat(goalCurrent(a.token, g1)).isEqualByComparingTo(new BigDecimal("100.00"));
+        assertThat(goalCurrent(a.token, g2)).isEqualByComparingTo(new BigDecimal("-25.00"));
     }
 
     private AuthData reg(String login, String pass) throws Exception {
@@ -285,6 +362,33 @@ class HomeBudgetApiTests {
                 .andExpect(status().isCreated())
                 .andReturn();
         return UUID.fromString(om.readTree(r.getResponse().getContentAsString()).path("id").asText());
+    }
+
+    private UUID addGoal(String token, String name, int target) throws Exception {
+        MvcResult r = mvc.perform(post("/api/v1/goal")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(j(Map.of(
+                                "name", name,
+                                "target", target
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return UUID.fromString(om.readTree(r.getResponse().getContentAsString()).path("id").asText());
+    }
+
+    private BigDecimal goalCurrent(String token, UUID goalId) throws Exception {
+        MvcResult r = mvc.perform(get("/api/v1/goal")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode list = om.readTree(r.getResponse().getContentAsString());
+        for (JsonNode n : list) {
+            if (goalId.toString().equals(n.path("id").asText())) {
+                return n.path("current").decimalValue();
+            }
+        }
+        throw new IllegalStateException("Goal not found in response");
     }
 
     private String j(Object v) throws Exception {

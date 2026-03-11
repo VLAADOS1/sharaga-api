@@ -37,6 +37,10 @@ public class Tx {
     @JoinColumn(name = "cat_id", nullable = false)
     private Cat cat;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "goal_id")
+    private Goal goal;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 8)
     private Kind type;

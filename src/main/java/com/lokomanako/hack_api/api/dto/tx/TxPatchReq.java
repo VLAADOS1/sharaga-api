@@ -10,23 +10,26 @@ import java.util.UUID;
 import lombok.Data;
 
 @Data
-@Schema(description = "обновление транзакции")
+@Schema(description = "РѕР±РЅРѕРІР»РµРЅРёРµ С‚СЂР°РЅР·Р°РєС†РёРё")
 public class TxPatchReq {
 
-    @Schema(description = "Тип", example = "inc")
+    @Schema(description = "РўРёРї", example = "inc")
     private Kind type;
 
     @DecimalMin(value = "0.01")
-    @Schema(description = "Сумма", example = "5000.00")
+    @Schema(description = "РЎСѓРјРјР°", example = "5000.00")
     private BigDecimal sum;
 
     @Size(max = 80)
-    @Schema(description = "Комментарий", example = "Зарплата")
+    @Schema(description = "РљРѕРјРјРµРЅС‚Р°СЂРёР№", example = "Р—Р°СЂРїР»Р°С‚Р°")
     private String note;
 
-    @Schema(description = "ID")
+    @Schema(description = "ID категории")
     private UUID catId;
 
-    @Schema(description = "Дата операции", example = "2026-03-03")
+    @Schema(description = "ID цели")
+    private UUID goalId;
+
+    @Schema(description = "Р”Р°С‚Р° РѕРїРµСЂР°С†РёРё", example = "2026-03-03")
     private LocalDate date;
 }

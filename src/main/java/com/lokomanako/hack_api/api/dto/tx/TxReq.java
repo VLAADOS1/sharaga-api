@@ -11,27 +11,31 @@ import java.util.UUID;
 import lombok.Data;
 
 @Data
-@Schema(description = "создание транзакции")
+@Schema(description = "СЃРѕР·РґР°РЅРёРµ С‚СЂР°РЅР·Р°РєС†РёРё")
 public class TxReq {
 
     @NotNull
-    @Schema(description = "Тип операции", example = "exp")
+    @Schema(description = "РўРёРї РѕРїРµСЂР°С†РёРё", example = "exp")
     private Kind type;
 
     @NotNull
     @DecimalMin(value = "0.01")
-    @Schema(description = "Сумма", example = "1200.50")
+    @Schema(description = "РЎСѓРјРјР°", example = "1200.50")
     private BigDecimal sum;
 
     @Size(max = 80)
-    @Schema(description = "Комментарий", example = "Продукты")
+    @Schema(description = "РљРѕРјРјРµРЅС‚Р°СЂРёР№", example = "РџСЂРѕРґСѓРєС‚С‹")
     private String note;
 
     @NotNull
-    @Schema(description = "ID")
+    @Schema(description = "ID категории")
     private UUID catId;
 
     @NotNull
-    @Schema(description = "Дата операции", example = "2026-03-03")
+    @Schema(description = "ID цели")
+    private UUID goalId;
+
+    @NotNull
+    @Schema(description = "Р”Р°С‚Р° РѕРїРµСЂР°С†РёРё", example = "2026-03-03")
     private LocalDate date;
 }

@@ -95,6 +95,8 @@ public class RepSvc {
                 t.getCat().getId(),
                 t.getCat().getName(),
                 t.getCat().getColor(),
+                t.getGoal() == null ? null : t.getGoal().getId(),
+                t.getGoal() == null ? null : t.getGoal().getName(),
                 t.getDt()
         );
     }

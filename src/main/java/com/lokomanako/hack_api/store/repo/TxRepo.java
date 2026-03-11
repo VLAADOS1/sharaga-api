@@ -18,6 +18,10 @@ public interface TxRepo extends JpaRepository<Tx, UUID> {
 
     long countByCat_IdAndUsr_Id(UUID catId, UUID uid);
 
+    List<Tx> findByUsr_IdAndGoal_Id(UUID uid, UUID goalId);
+
+    boolean existsByGoal_IdAndUsr_Id(UUID goalId, UUID uid);
+
     void deleteByUsr_Id(UUID uid);
 
     @Query("""

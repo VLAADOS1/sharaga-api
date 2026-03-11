@@ -12,23 +12,36 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Транзакция")
+@Schema(description = "РўСЂР°РЅР·Р°РєС†РёСЏ")
 public class TxRes {
 
-    @Schema(description = "ID транзакции")
+    @Schema(description = "ID С‚СЂР°РЅР·Р°РєС†РёРё")
     private UUID id;
-    @Schema(description = "Тип операции", example = "exp")
+
+    @Schema(description = "РўРёРї РѕРїРµСЂР°С†РёРё", example = "exp")
     private Kind type;
-    @Schema(description = "Сумма операции", example = "1200.50")
+
+    @Schema(description = "РЎСѓРјРјР° РѕРїРµСЂР°С†РёРё", example = "1200.50")
     private BigDecimal sum;
-    @Schema(description = "Комментарий", example = "Продукты")
+
+    @Schema(description = "РљРѕРјРјРµРЅС‚Р°СЂРёР№", example = "РџСЂРѕРґСѓРєС‚С‹")
     private String note;
-    @Schema(description = "ID категории")
+
+    @Schema(description = "ID РєР°С‚РµРіРѕСЂРёРё")
     private UUID catId;
-    @Schema(description = "Название категории", example = "Еда")
+
+    @Schema(description = "РќР°Р·РІР°РЅРёРµ РєР°С‚РµРіРѕСЂРёРё", example = "Р•РґР°")
     private String catName;
-    @Schema(description = "Цвет категории", example = "#4CAF50")
+
+    @Schema(description = "Р¦РІРµС‚ РєР°С‚РµРіРѕСЂРёРё", example = "#4CAF50")
     private String catColor;
-    @Schema(description = "Дата операции", example = "2026-03-03")
+
+    @Schema(description = "ID цели")
+    private UUID goalId;
+
+    @Schema(description = "Название цели")
+    private String goalName;
+
+    @Schema(description = "Р”Р°С‚Р° РѕРїРµСЂР°С†РёРё", example = "2026-03-03")
     private LocalDate date;
 }

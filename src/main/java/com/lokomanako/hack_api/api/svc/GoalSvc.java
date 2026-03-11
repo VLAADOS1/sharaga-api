@@ -33,39 +33,54 @@ public class GoalSvc {
     private UsrRepo usrRepo;
 
     @Transactional(readOnly = true)
-    public GoalRes get(UUID uid) {
-        Goal g = goalRepo.findByUsr_Id(uid).orElse(null);
-        BigDecimal cur = bal(uid);
-        if (g == null) {
-            return new GoalRes(null, cur, BigDecimal.ZERO, BigDecimal.ZERO);
-        }
-        return new GoalRes(g.getName(), cur, g.getTarget(), pct(cur, g.getTarget()));
+    public List<GoalRes> list(UUID uid) {
+        return goalRepo.findByUsr_IdOrderByNameAsc(uid).stream()
+                .map(g -> map(uid, g))
+                .toList();
     }
 
     @Transactional
-    public GoalRes put(UUID uid, GoalReq req) {
-        Goal g = goalRepo.findByUsr_Id(uid).orElse(null);
-        if (g == null) {
-            AppUsr u = usrRepo.findById(uid).orElseThrow(() ->
-                    new ApiEx(HttpStatus.UNAUTHORIZED, "AUTH_UNAUTHORIZED", "Unauthorized")
-            );
-            g = new Goal();
-            g.setUsr(u);
-        }
+    public GoalRes add(UUID uid, GoalReq req) {
+        AppUsr u = usrRepo.findById(uid).orElseThrow(() ->
+                new ApiEx(HttpStatus.UNAUTHORIZED, "AUTH_UNAUTHORIZED", "Unauthorized")
+        );
+        Goal g = new Goal();
+        g.setUsr(u);
         g.setName(StrU.t(req.getName()));
         g.setTarget(req.getTarget());
-        goalRepo.save(g);
-        BigDecimal cur = bal(uid);
-        return new GoalRes(g.getName(), cur, g.getTarget(), pct(cur, g.getTarget()));
+        g = goalRepo.save(g);
+        return map(uid, g);
     }
 
     @Transactional
-    public void del(UUID uid) {
-        goalRepo.deleteByUsr_Id(uid);
+    public GoalRes patch(UUID uid, UUID id, GoalReq req) {
+        Goal g = goalRepo.findByIdAndUsr_Id(id, uid).orElseThrow(() ->
+                new ApiEx(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND", "Goal not found")
+        );
+        g.setName(StrU.t(req.getName()));
+        g.setTarget(req.getTarget());
+        g = goalRepo.save(g);
+        return map(uid, g);
     }
 
-    private BigDecimal bal(UUID uid) {
-        List<Tx> list = txRepo.findAllForRep(uid, null, null, null, null);
+    @Transactional
+    public void del(UUID uid, UUID id) {
+        Goal g = goalRepo.findByIdAndUsr_Id(id, uid).orElseThrow(() ->
+                new ApiEx(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND", "Goal not found")
+        );
+        if (txRepo.existsByGoal_IdAndUsr_Id(g.getId(), uid)) {
+            throw new ApiEx(HttpStatus.CONFLICT, "GOAL_IN_USE", "Goal has transactions");
+        }
+        goalRepo.delete(g);
+    }
+
+    private GoalRes map(UUID uid, Goal g) {
+        BigDecimal cur = bal(uid, g.getId());
+        return new GoalRes(g.getId(), g.getName(), cur, g.getTarget(), pct(cur, g.getTarget()));
+    }
+
+    private BigDecimal bal(UUID uid, UUID gid) {
+        List<Tx> list = txRepo.findByUsr_IdAndGoal_Id(uid, gid);
         BigDecimal b = BigDecimal.ZERO;
         for (Tx t : list) {
             if (t.getType() == Kind.INC) {
